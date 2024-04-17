@@ -5,7 +5,6 @@ import { Link } from 'react-router-dom';
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -17,6 +16,9 @@ import { useForm } from "react-hook-form";
 import { SignupValidation } from "@/lib/validation";
 import Loader from "@/components/shared/Loader";
 import { createUserAccount } from "@/lib/appwrite/api";
+import { useToast } from '@/components/ui/use-toast';
+import { useCreateUserAccount, useSignInAccount } from "@/lib/react-query/queriesAndMutations";
+
 
 const formSchema = z.object({
   username: z.string().min(2).max(50),
@@ -24,9 +26,11 @@ const formSchema = z.object({
 
 const SignupForm = () => {
 
-  // set boolean value isLoading to be false to use it later in the submit button
-  // going to put icon there for loading
-  const isLoading = false;
+  const { toast } = useToast();
+
+  const { mutateAsync: createUserAccount, isLoading: isCreatingUser } = useCreateUserAccount();
+
+  const { mutateAsync: signInAccount, isLoading: isSigningIn} = useSignInAccount();
 
   // 1. Define form.
   const form = useForm<z.infer<typeof SignupValidation>>({
@@ -43,7 +47,25 @@ const SignupForm = () => {
   async function onSubmit(values: z.infer<typeof SignupValidation>) {
     const newUser = await createUserAccount(values);
 
-    console.log(newUser);
+    if(!newUser){
+      return toast({
+        title: "Sign up failed. Please try again..."
+      });
+    }
+
+    const session = await signInAccount({
+      email: values.email,
+      password: values.password,
+    }
+    );
+
+    if(!session){
+      return toast({
+        title: "Sign in failed. Please try again..."
+      })
+    }
+
+    
   }
 
   return (
